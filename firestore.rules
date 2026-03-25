@@ -1,0 +1,92 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: metadata
+    // Document ID: system
+    // Fields:
+    //   - status: string (Idle, Running)
+    //   - lastReplenishRun: timestamp
+    //   - lastError: string
+    //
+    // Collection: inventory
+    // Document ID: bucketId
+    // Fields:
+    //   - bucketId: string
+    //   - category: string
+    //   - difficulty: string
+    //   - count: number
+    //   - threshold: number
+    //
+    // Collection: error_logs
+    // Document ID: logId
+    // Fields:
+    //   - bucketId: string
+    //   - stage: string
+    //   - message: string
+    //   - timestamp: timestamp
+    //
+    // Collection: triggers
+    // Document ID: triggerId
+    // Fields:
+    //   - action: string
+    //   - params: map
+    //   - status: string (pending, processing, completed, failed)
+    //   - timestamp: timestamp
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.email == "dustin.broussard@gmail.com" && request.auth.token.email_verified == true);
+    }
+    
+    function isValidStatus(status) {
+      return status in ['Idle', 'Running'];
+    }
+    
+    function isValidTriggerStatus(status) {
+      return status in ['pending', 'processing', 'completed', 'failed'];
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /metadata/system {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /inventory/{bucketId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /error_logs/{logId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /triggers/{triggerId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+    
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "name": "Remote Control: Question Bank Admin",
+  "description": "A minimalist, high-performance administrative console for managing a Firestore-backed question bank with real-time monitoring and manual triggers.",
+  "requestFramePermissions": []
+}

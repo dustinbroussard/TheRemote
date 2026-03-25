@@ -1,0 +1,24 @@
+{
+  "name": "Remote Control: Question Bank Admin",
+  "short_name": "RC Admin",
+  "description": "High-performance administrative console for managing a Firestore-backed question bank.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#00ff00",
+  "icons": [
+    {
+      "src": "https://img.icons8.com/color/192/000000/remote-control.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://img.icons8.com/color/512/000000/remote-control.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

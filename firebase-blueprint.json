@@ -1,0 +1,123 @@
+{
+  "entities": {
+    "SystemMetadata": {
+      "title": "System Metadata",
+      "description": "Global system state and telemetry.",
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["Idle", "Running"],
+          "description": "Current operational state."
+        },
+        "lastReplenishRun": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of the last replenishment run."
+        },
+        "lastError": {
+          "type": "string",
+          "description": "Snippet of the last error encountered."
+        }
+      },
+      "required": ["status"]
+    },
+    "InventoryItem": {
+      "title": "Inventory Item",
+      "description": "Question counts for a specific bucket.",
+      "type": "object",
+      "properties": {
+        "bucketId": {
+          "type": "string",
+          "description": "Unique identifier for the bucket (category_difficulty)."
+        },
+        "category": {
+          "type": "string",
+          "description": "Category of questions (e.g., History, Science)."
+        },
+        "difficulty": {
+          "type": "string",
+          "description": "Difficulty level (Easy, Medium, Hard)."
+        },
+        "count": {
+          "type": "integer",
+          "description": "Number of questions currently in stock."
+        },
+        "threshold": {
+          "type": "integer",
+          "description": "Low-stock threshold."
+        }
+      },
+      "required": ["bucketId", "category", "difficulty", "count"]
+    },
+    "ErrorLog": {
+      "title": "Error Log",
+      "description": "Detailed failure diagnostics.",
+      "type": "object",
+      "properties": {
+        "bucketId": {
+          "type": "string",
+          "description": "Bucket associated with the failure."
+        },
+        "stage": {
+          "type": "string",
+          "description": "Stage where the failure occurred (e.g., Generation, Verification)."
+        },
+        "message": {
+          "type": "string",
+          "description": "Raw error message."
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the error occurred."
+        }
+      },
+      "required": ["stage", "message", "timestamp"]
+    },
+    "Trigger": {
+      "title": "Trigger",
+      "description": "Manual execution trigger.",
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "description": "Action to perform (e.g., replenishAllBuckets, replenishSelectedBucket)."
+        },
+        "params": {
+          "type": "object",
+          "description": "Parameters for the action."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "processing", "completed", "failed"],
+          "description": "Current status of the trigger."
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the trigger was created."
+        }
+      },
+      "required": ["action", "status", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/metadata/system": {
+      "schema": "SystemMetadata",
+      "description": "Global system state."
+    },
+    "/inventory/{bucketId}": {
+      "schema": "InventoryItem",
+      "description": "Question bank inventory."
+    },
+    "/error_logs/{logId}": {
+      "schema": "ErrorLog",
+      "description": "System failure logs."
+    },
+    "/triggers/{triggerId}": {
+      "schema": "Trigger",
+      "description": "Manual action triggers."
+    }
+  }
+}
