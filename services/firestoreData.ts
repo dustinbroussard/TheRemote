@@ -1,4 +1,4 @@
-export function omitUndefinedFields<T extends Record<string, unknown>>(value: T): T {
+export function omitUndefinedFields<T extends object>(value: T): T {
   return Object.fromEntries(
     Object.entries(value).filter(([, entryValue]) => entryValue !== undefined)
   ) as T;

@@ -21,33 +21,9 @@ import { useAuth, AuthProvider } from './contexts/AuthContext';
 import { auth, db } from './firebase';
 import { useAdminData } from './hooks/useAdminData';
 import { cn } from './lib/utils';
+import { handleFirestoreError } from './lib/firestoreErrorHandler';
 import { StatusScreen } from './screens/StatusScreen';
-import { ErrorLog, FirestoreErrorInfo, InventoryItem, OperationType } from './types';
-
-function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
-  const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo:
-        auth.currentUser?.providerData.map((provider) => ({
-          providerId: provider.providerId,
-          displayName: provider.displayName,
-          email: provider.email,
-          photoUrl: provider.photoURL,
-        })) || [],
-    },
-    operationType,
-    path,
-  };
-
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
-}
+import { ErrorLog, InventoryItem, OperationType } from './types';
 
 const tabs = [
   { to: '/status', label: 'Status', icon: Activity },
@@ -416,7 +392,11 @@ function AppShell() {
           <div className="w-2 h-2 bg-primary-accent rounded-full animate-pulse" />
           <h1 className="text-[11px] uppercase tracking-[0.2em] font-black">Remote Control</h1>
         </div>
-        <button onClick={() => void signOutUser()} className="text-gray-500 hover:text-danger transition-colors">
+        <button
+          aria-label="Sign out"
+          onClick={() => void signOutUser()}
+          className="text-gray-500 hover:text-danger transition-colors"
+        >
           <LogOut size={16} />
         </button>
       </header>

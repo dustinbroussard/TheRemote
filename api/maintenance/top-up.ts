@@ -1,14 +1,51 @@
 import 'dotenv/config';
-import { getAdminDb } from '../_lib/firebase-admin.js';
+import { getAdminAuth, getAdminDb } from '../_lib/firebase-admin.js';
 import { runQuestionPipeline } from '../generate-questions.js';
-import { getPlayableCategories } from '../../src/types.js';
+import { getPlayableCategories } from '../../types.js';
 import {
   AUTO_REPLENISH_BATCH_SIZE,
   MAINTENANCE_REPLENISH_THRESHOLD,
-} from '../../src/services/questionInventoryConfig.js';
-import { QUESTION_COLLECTION } from '../../src/services/questionCollections.js';
+} from '../../services/questionInventoryConfig.js';
+import { QUESTION_COLLECTION } from '../../services/questionCollections.js';
 
 const db = getAdminDb();
+const adminAuth = getAdminAuth();
+
+function parseAllowedEmails(value: string | undefined) {
+  return (value ?? '')
+    .split(',')
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+async function verifyAuthorizedCaller(req: any) {
+  const secretToken = process.env.MAINTENANCE_TOKEN;
+  const authHeader = req.headers.authorization;
+  const maintenanceToken = req.headers['x-maintenance-token'];
+
+  if (secretToken && maintenanceToken === secretToken) {
+    return { authType: 'maintenance-token' as const, email: null };
+  }
+
+  if (!authHeader?.startsWith('Bearer ')) {
+    throw new Error('Missing bearer token');
+  }
+
+  const idToken = authHeader.slice('Bearer '.length).trim();
+  if (!idToken) {
+    throw new Error('Missing bearer token');
+  }
+
+  const decodedToken = await adminAuth.verifyIdToken(idToken);
+  const email = typeof decodedToken.email === 'string' ? decodedToken.email.toLowerCase() : null;
+  const allowedEmails = parseAllowedEmails(process.env.MAINTENANCE_ALLOWED_EMAILS);
+
+  if (!email || decodedToken.email_verified !== true || !allowedEmails.includes(email)) {
+    throw new Error('Caller is not on the maintenance email allowlist');
+  }
+
+  return { authType: 'firebase-id-token' as const, email };
+}
 
 async function getExistingQuestions(category: string): Promise<{ category: string; question: string }[]> {
   const snapshot = await db.collection(QUESTION_COLLECTION)
@@ -28,13 +65,17 @@ async function sleep(ms: number) {
 }
 
 export default async function handler(req: any, res: any) {
-  // Basic security: Check for an auth header or just allow for now if it's internal
-  // In a real app, you'd use a secret token
-  const authHeader = req.headers['x-maintenance-token'];
-  const secretToken = process.env.MAINTENANCE_TOKEN;
-  
-  if (secretToken && authHeader !== secretToken) {
-    return res.status(401).json({ error: 'Unauthorized' });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    const caller = await verifyAuthorizedCaller(req);
+    console.info('[top-up] authorized caller', caller);
+  } catch (error) {
+    return res.status(401).json({
+      error: error instanceof Error ? error.message : 'Unauthorized',
+    });
   }
 
   const results: any[] = [];
@@ -88,7 +129,7 @@ export default async function handler(req: any, res: any) {
               batch.set(docRef, {
                 ...q,
                 validationStatus: 'approved', // Force approved status for bank replenishment
-                createdAt: Date.now(),
+                createdAt: new Date(),
                 usedCount: 0,
                 used: false,
               });

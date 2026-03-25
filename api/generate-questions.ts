@@ -7,17 +7,17 @@ import {
   isRateLimitError,
   questionSchema,
   TRIVIA_PIPELINE_VERSION,
-} from '../src/services/gemini.js';
-import type { ExistingQuestion } from '../src/services/gemini.js';
-import { buildStylingPrompt, normalizeStylingResults, questionStylingSchema } from '../src/services/questionStyling.js';
+} from '../services/gemini.js';
+import type { ExistingQuestion } from '../services/gemini.js';
+import { buildStylingPrompt, normalizeStylingResults, questionStylingSchema } from '../services/questionStyling.js';
 import {
   buildVerificationPrompt,
   isQuestionApprovedForStorage,
   normalizeVerificationResults,
   questionVerificationSchema,
-} from '../src/services/questionVerification.js';
-import { validateGeneratedQuestions } from '../src/services/questionValidation.js';
-import type { TriviaQuestion } from '../src/types.js';
+} from '../services/questionVerification.js';
+import { validateGeneratedQuestions } from '../services/questionValidation.js';
+import type { TriviaQuestion } from '../types.js';
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
 export type PipelineStage = 'request' | 'generation' | 'verification' | 'styling' | 'response';

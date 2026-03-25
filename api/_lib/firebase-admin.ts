@@ -1,4 +1,5 @@
 import { initializeApp, getApps, cert, type App } from 'firebase-admin/app';
+import { getAuth, type Auth } from 'firebase-admin/auth';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 
 const FIREBASE_PROJECT_ID = 'ai-studio-applet-webapp-a549d';
@@ -34,8 +35,13 @@ export function initAdmin(): App {
  * Returns a Firestore instance for the specific named database used by this app.
  */
 export function getAdminDb(): Firestore {
-  initAdmin();
-  return getFirestore(FIRESTORE_DATABASE_ID);
+  const app = initAdmin();
+  return getFirestore(app, FIRESTORE_DATABASE_ID);
+}
+
+export function getAdminAuth(): Auth {
+  const app = initAdmin();
+  return getAuth(app);
 }
 
 function getServiceAccount() {
@@ -50,6 +56,6 @@ function getServiceAccount() {
 
   // 2. Local development: You might have GOOGLE_APPLICATION_CREDENTIALS set to a path
   // However, for this project, we explicitly handle the named database.
-  
+
   return null;
 }

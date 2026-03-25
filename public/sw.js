@@ -3,9 +3,7 @@ const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
-  '/src/main.tsx',
-  '/src/App.tsx',
-  '/src/index.css'
+  '/generator.html',
 ];
 
 // Install event: cache initial assets
@@ -36,8 +34,16 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event: Stale-While-Revalidate strategy
 self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
   // Skip cross-origin requests (like Firestore/Auth)
   if (!event.request.url.startsWith(self.location.origin)) {
+    return;
+  }
+
+  if (event.request.url.includes('/api/')) {
     return;
   }
 
@@ -46,12 +52,15 @@ self.addEventListener('fetch', (event) => {
       return cache.match(event.request).then((cachedResponse) => {
         const fetchPromise = fetch(event.request).then((networkResponse) => {
           // Cache the new response
-          if (networkResponse.ok) {
+          if (networkResponse.ok && networkResponse.type === 'basic') {
             cache.put(event.request, networkResponse.clone());
           }
           return networkResponse;
         }).catch(() => {
-          // If network fails, just return the cached response (even if undefined)
+          if (event.request.mode === 'navigate') {
+            return cache.match('/index.html');
+          }
+
           return cachedResponse;
         });
 
