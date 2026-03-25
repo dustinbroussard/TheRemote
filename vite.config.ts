@@ -3,6 +3,21 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig, loadEnv} from 'vite';
 
+function createContentSecurityPolicy(isDev: boolean) {
+  const scriptSrc = ["'self'", 'https://apis.google.com'];
+  const connectSrc = [
+    "'self'",
+    'https://*.googleapis.com',
+    'https://*.googleusercontent.com',
+    'https://identitytoolkit.googleapis.com',
+    'https://securetoken.googleapis.com',
+    'https://firestore.googleapis.com',
+    'https://www.googleapis.com',
+    'https://openrouter.ai',
+    'https://generativelanguage.googleapis.com',
+  ];
+
+
 export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
   return {
