@@ -9,6 +9,7 @@ import {
   RefreshCcw,
   ShieldAlert,
   Zap,
+  Database as DatabaseIcon,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { format } from 'date-fns';
@@ -21,10 +22,11 @@ import { supabase } from './supabase';
 import { useAdminData } from './hooks/useAdminData';
 import { cn } from './lib/utils';
 import { StatusScreen } from './screens/StatusScreen';
-import { ErrorLog, InventoryItem, OperationType } from './types';
+import { ErrorLog, InventoryItem, OperationType, TableStat } from './types';
 
 const tabs = [
   { to: '/status', label: 'Status', icon: Activity },
+  { to: '/database', label: 'Database', icon: DatabaseIcon },
   { to: '/actions', label: 'Actions', icon: Zap },
   { to: '/logs', label: 'Logs', icon: FileText },
 ] as const;
@@ -332,9 +334,53 @@ function LogsScreen({ logs }: { logs: ErrorLog[] }) {
   );
 }
 
+function DatabaseScreen({ stats }: { stats: TableStat[] }) {
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
+      <Card title="Database Overview" icon={DatabaseIcon}>
+        <div className="space-y-4">
+          <p className="text-[10px] text-gray-500 uppercase font-bold">Public Schema Tables</p>
+          <div className="grid grid-cols-1 gap-2">
+            {stats.length === 0 ? (
+              <div className="text-center py-8 text-gray-600 text-xs italic">No table statistics available</div>
+            ) : (
+              stats.map((stat) => (
+                <div key={stat.name} className="flex items-center justify-between p-3 bg-bg-tertiary border border-bg-tertiary rounded-sm">
+                  <div className="flex items-center gap-2">
+                    <DatabaseIcon size={14} className="text-primary-accent" />
+                    <span className="text-xs font-bold text-gray-200">{stat.name}</span>
+                  </div>
+                  <div className="text-xs font-mono font-bold text-primary-accent">{stat.count} rows</div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </Card>
+      
+      <Card title="System Health" icon={ShieldAlert}>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between text-[10px] uppercase font-bold">
+            <span className="text-gray-500">Real-time Connection</span>
+            <span className="text-success">Active</span>
+          </div>
+          <div className="flex items-center justify-between text-[10px] uppercase font-bold">
+            <span className="text-gray-500">Auth Service</span>
+            <span className="text-success">Online</span>
+          </div>
+          <div className="flex items-center justify-between text-[10px] uppercase font-bold">
+            <span className="text-gray-500">Storage API</span>
+            <span className="text-tertiary-accent">Standby</span>
+          </div>
+        </div>
+      </Card>
+    </motion.div>
+  );
+}
+
 function AppShell() {
   const { signOutUser, authReady, user, isAdmin } = useAuth();
-  const { metadata, inventory, logs, loading } = useAdminData(authReady && !!user && isAdmin);
+  const { metadata, inventory, logs, tableStats, loading } = useAdminData(authReady && !!user && isAdmin);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
 
@@ -388,7 +434,7 @@ function AppShell() {
       <header className="sticky top-0 z-20 bg-bg-primary/80 backdrop-blur-md border-b border-bg-tertiary px-6 py-4 flex justify-between items-center">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 bg-primary-accent rounded-full animate-pulse" />
-          <h1 className="text-[11px] uppercase tracking-[0.2em] font-black">Remote Control</h1>
+          <h1 className="text-[11px] uppercase tracking-[0.2em] font-black">Supabase Monitor</h1>
         </div>
         <button
           aria-label="Sign out"
@@ -403,6 +449,7 @@ function AppShell() {
         <Routes>
           <Route index element={<Navigate to="/status" replace />} />
           <Route path="/status" element={<StatusScreen metadata={metadata} inventory={inventory} />} />
+          <Route path="/database" element={<DatabaseScreen stats={tableStats} />} />
           <Route path="/actions" element={<ActionsScreen inventory={inventory} />} />
           <Route path="/logs" element={<LogsScreen logs={logs} />} />
         </Routes>

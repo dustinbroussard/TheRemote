@@ -58,7 +58,7 @@ function createMissingSupabaseClient() {
   );
 }
 
-// Add the database types as needed
+// Add the database types as needed.
 export interface Database {
   public: {
     Tables: {
@@ -120,10 +120,6 @@ export const signIn = async () => {
     provider: 'google',
     options: {
       redirectTo: window.location.origin,
-      queryParams: {
-        access_type: 'offline',
-        prompt: 'consent',
-      },
     },
   });
 

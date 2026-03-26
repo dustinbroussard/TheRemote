@@ -40,6 +40,11 @@ export enum OperationType {
   AUTH = 'auth',
 }
 
+export interface TableStat {
+  name: string;
+  count: number;
+}
+
 export interface SupabaseErrorInfo {
   error: string;
   operationType: OperationType;

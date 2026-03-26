@@ -15,8 +15,10 @@ export const adminConfig = {
 };
 
 type AdminCandidate = {
+  id?: string | null;
   uid?: string | null;
   email?: string | null;
+  email_confirmed_at?: string | null;
   emailVerified?: boolean;
 };
 
@@ -25,10 +27,13 @@ export function isAdminUser(user: AdminCandidate | null | undefined) {
     return false;
   }
 
-  const hasAllowedUid = !!user.uid && adminConfig.uids.includes(user.uid);
+  const userId = user.id || user.uid;
+  const hasAllowedUid = !!userId && adminConfig.uids.includes(userId);
+  
+  const isEmailVerified = user.emailVerified === true || !!user.email_confirmed_at;
   const hasAllowedEmail =
     !!user.email &&
-    user.emailVerified === true &&
+    isEmailVerified &&
     adminConfig.emails.includes(user.email);
 
   return hasAllowedUid || hasAllowedEmail;
