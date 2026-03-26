@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import {
   Activity,
   AlertTriangle,
@@ -18,10 +17,9 @@ import { HashRouter, NavLink, Navigate, Outlet, Route, Routes } from 'react-rout
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { getAdminIdentitySummary } from './config/admin';
 import { useAuth, AuthProvider } from './contexts/AuthContext';
-import { auth, db } from './firebase';
+import { supabase } from './supabase';
 import { useAdminData } from './hooks/useAdminData';
 import { cn } from './lib/utils';
-import { handleFirestoreError } from './lib/firestoreErrorHandler';
 import { StatusScreen } from './screens/StatusScreen';
 import { ErrorLog, InventoryItem, OperationType } from './types';
 
@@ -136,7 +134,7 @@ function UnauthorizedScreen() {
       <AlertTriangle size={48} className="text-danger mb-4" />
       <h1 className="text-danger text-xl font-bold mb-2 uppercase">Access Denied</h1>
       <p className="text-gray-500 text-xs mb-3 leading-relaxed">
-        Your account ({user?.email || user?.uid || 'unknown'}) is not authorized for this terminal.
+        Your account ({user?.email || user?.id || 'unknown'}) is not authorized for this terminal.
       </p>
       <p className="text-gray-600 text-[10px] mb-8 font-mono">{getAdminIdentitySummary()}</p>
       <button
@@ -181,16 +179,16 @@ function ActionsScreen({ inventory }: { inventory: InventoryItem[] }) {
     setIsTriggering(true);
     setLastTriggerStatus(null);
     try {
-      await addDoc(collection(db, 'triggers'), {
+      await supabase.from('triggers').insert({
         action,
         params: params || {},
         status: 'pending',
-        timestamp: serverTimestamp(),
+        timestamp: new Date().toISOString(),
       });
       setLastTriggerStatus('Success');
       window.setTimeout(() => setLastTriggerStatus(null), 3000);
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, 'triggers');
+      console.error('Trigger error:', error);
     } finally {
       setIsTriggering(false);
     }
@@ -316,7 +314,7 @@ function LogsScreen({ logs }: { logs: ErrorLog[] }) {
                 <div className="flex justify-between items-start mb-2 gap-4">
                   <div className="text-[10px] font-bold text-danger uppercase tracking-widest">{log.stage}</div>
                   <div className="text-[9px] text-gray-500 font-mono">
-                    {format(log.timestamp.toDate(), 'MM/dd HH:mm:ss')}
+                    {format(new Date(log.timestamp), 'MM/dd HH:mm:ss')}
                   </div>
                 </div>
                 <div className="text-[11px] text-gray-300 mb-2 font-mono leading-relaxed">{log.message}</div>

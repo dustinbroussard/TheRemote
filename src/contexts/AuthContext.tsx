@@ -1,14 +1,8 @@
-import {
-  onAuthStateChanged,
-  signInWithPopup,
-  signInWithRedirect,
-  signOut,
-  type User,
-} from 'firebase/auth';
+import { User } from '@supabase/supabase-js';
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
-import { auth, googleProvider } from '../firebase';
 import { isAdminUser } from '../config/admin';
+import { onAuthStateChange, signIn, signOut, getSession } from '../supabase';
 
 type AuthContextValue = {
   user: User | null;
@@ -20,59 +14,42 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function shouldUseRedirectSignIn() {
-  if (typeof window === 'undefined') {
-    return false;
-  }
-
-  const standalone =
-    window.matchMedia('(display-mode: standalone)').matches ||
-    Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
-  const mobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent);
-
-  return standalone || mobile;
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
+    // Initial session check
+    getSession().then(({ data }) => {
+      setUser(data.session?.user ?? null);
+      setAuthReady(true);
+    });
+
+    const subscription = onAuthStateChange((nextUser) => {
       setUser(nextUser);
       setAuthReady(true);
     });
 
-    return unsubscribe;
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
       authReady,
-      isAdmin: isAdminUser(user),
+      isAdmin: isAdminUser(user as any),
       signIn: async () => {
-        if (shouldUseRedirectSignIn()) {
-          await signInWithRedirect(auth, googleProvider);
-          return;
-        }
-
         try {
-          await signInWithPopup(auth, googleProvider);
+          await signIn();
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          const shouldFallback =
-            message.includes('popup') || message.includes('redirect');
-
-          if (!shouldFallback) {
-            throw error;
-          }
-
-          await signInWithRedirect(auth, googleProvider);
+          console.error('Sign in error:', error);
+          throw error;
         }
       },
       signOutUser: async () => {
-        await signOut(auth);
+        await signOut();
       },
     }),
     [authReady, user],

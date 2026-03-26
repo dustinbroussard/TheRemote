@@ -1,15 +1,13 @@
 import 'dotenv/config';
-import { getAdminAuth, getAdminDb } from '../_lib/firebase-admin.js';
+import { getAdminDb } from '../_lib/supabase-admin.js';
 import { runQuestionPipeline } from '../generate-questions.js';
 import { getPlayableCategories } from '../../types.js';
 import {
   AUTO_REPLENISH_BATCH_SIZE,
   MAINTENANCE_REPLENISH_THRESHOLD,
 } from '../../services/questionInventoryConfig.js';
-import { QUESTION_COLLECTION } from '../../services/questionCollections.js';
 
-const db = getAdminDb();
-const adminAuth = getAdminAuth();
+const supabase = getAdminDb();
 
 function parseAllowedEmails(value: string | undefined) {
   return (value ?? '')
@@ -31,33 +29,40 @@ async function verifyAuthorizedCaller(req: any) {
     throw new Error('Missing bearer token');
   }
 
-  const idToken = authHeader.slice('Bearer '.length).trim();
-  if (!idToken) {
+  const accessToken = authHeader.slice('Bearer '.length).trim();
+  if (!accessToken) {
     throw new Error('Missing bearer token');
   }
 
-  const decodedToken = await adminAuth.verifyIdToken(idToken);
-  const email = typeof decodedToken.email === 'string' ? decodedToken.email.toLowerCase() : null;
+  const { data: { user }, error } = await supabase.auth.getUser(accessToken);
+  if (error || !user) {
+    throw new Error('Invalid access token');
+  }
+
+  const email = user.email?.toLowerCase() || null;
   const allowedEmails = parseAllowedEmails(process.env.MAINTENANCE_ALLOWED_EMAILS);
 
-  if (!email || decodedToken.email_verified !== true || !allowedEmails.includes(email)) {
+  if (!email || !allowedEmails.includes(email)) {
     throw new Error('Caller is not on the maintenance email allowlist');
   }
 
-  return { authType: 'firebase-id-token' as const, email };
+  return { authType: 'supabase-token' as const, email };
 }
 
 async function getExistingQuestions(category: string): Promise<{ category: string; question: string }[]> {
-  const snapshot = await db.collection(QUESTION_COLLECTION)
-    .where('category', '==', category)
-    .orderBy('createdAt', 'desc')
-    .limit(20)
-    .get();
+  const { data, error } = await supabase
+    .from('questions')
+    .select('category, question')
+    .eq('category', category)
+    .order('created_at', { ascending: false })
+    .limit(20);
 
-  return snapshot.docs.map(doc => ({
-    category: doc.get('category'),
-    question: doc.get('question'),
-  }));
+  if (error) {
+    console.error('Error fetching existing questions:', error);
+    return [];
+  }
+
+  return data || [];
 }
 
 async function sleep(ms: number) {
@@ -91,17 +96,19 @@ export default async function handler(req: any, res: any) {
     for (const difficulty of difficulties) {
       try {
         // 1. Check current inventory
-        const snapshot = await db.collection(QUESTION_COLLECTION)
-          .where('category', '==', category)
-          .where('difficulty', '==', difficulty)
-          .where('validationStatus', '==', 'approved')
-          .count()
-          .get();
+        const { count, error: countError } = await supabase
+          .from('questions')
+          .select('*', { count: 'exact', head: true })
+          .eq('category', category)
+          .eq('difficulty', difficulty)
+          .eq('validation_status', 'approved');
 
-        const count = snapshot.data().count;
+        if (countError) throw countError;
         
-        if (count < MAINTENANCE_REPLENISH_THRESHOLD) {
-          console.info(`[top-up] Replenishing ${category}/${difficulty}: current count ${count} < ${MAINTENANCE_REPLENISH_THRESHOLD}`);
+        const currentCount = count || 0;
+        
+        if (currentCount < MAINTENANCE_REPLENISH_THRESHOLD) {
+          console.info(`[top-up] Replenishing ${category}/${difficulty}: current count ${currentCount} < ${MAINTENANCE_REPLENISH_THRESHOLD}`);
           
           // 2. Fetch existing questions for deduplication
           const existingQuestions = await getExistingQuestions(category);
@@ -122,19 +129,17 @@ export default async function handler(req: any, res: any) {
           });
 
           if (newQuestions.length > 0) {
-            // 4. Store in Firestore
-            const batch = db.batch();
-            for (const q of newQuestions) {
-              const docRef = db.collection(QUESTION_COLLECTION).doc(q.id || `gen-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`);
-              batch.set(docRef, {
-                ...q,
-                validationStatus: 'approved', // Force approved status for bank replenishment
-                createdAt: new Date(),
-                usedCount: 0,
-                used: false,
-              });
-            }
-            await batch.commit();
+            // 4. Store in Supabase
+            const rows = newQuestions.map(q => ({
+              ...q,
+              validation_status: 'approved',
+              created_at: Math.floor(Date.now() / 1000), // Using unix timestamp as in types
+              used_count: 0,
+              used: false,
+            }));
+
+            const { error: insertError } = await supabase.from('questions').insert(rows);
+            if (insertError) throw insertError;
             
             console.info(`[top-up] Successfully added ${newQuestions.length} questions to ${category}/${difficulty}`);
             results.push({ category, difficulty, added: newQuestions.length, status: 'replenished' });
@@ -146,7 +151,7 @@ export default async function handler(req: any, res: any) {
             results.push({ category, difficulty, added: 0, status: 'pipeline_empty' });
           }
         } else {
-          results.push({ category, difficulty, count, status: 'sufficient' });
+          results.push({ category, difficulty, count: currentCount, status: 'sufficient' });
         }
       } catch (error) {
         console.error(`[top-up] Error replenishing ${category}/${difficulty}:`, error);

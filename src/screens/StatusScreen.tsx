@@ -89,7 +89,7 @@ export function StatusScreen({
             <div className="text-[10px] text-gray-500 uppercase mb-1">Last Replenish</div>
             <div className="text-xs font-mono text-secondary-text">
               {metadata?.lastReplenishRun
-                ? format(metadata.lastReplenishRun.toDate(), 'MM/dd/yyyy HH:mm:ss')
+                ? format(new Date(metadata.lastReplenishRun), 'MM/dd/yyyy HH:mm:ss')
                 : 'N/A'}
             </div>
           </div>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { onAuthStateChanged, type User } from 'firebase/auth';
+import { User } from '@supabase/supabase-js';
 import { Loader2, LogIn, ShieldCheck, Sparkles } from 'lucide-react';
-import { auth, finishSignInRedirect, signIn, signOut } from './firebase';
+import { getSession, onAuthStateChange, signIn, signOut } from './supabase';
 
 interface TriggerResult {
   message?: string;
@@ -36,17 +36,20 @@ export function GeneratorApp() {
   const [result, setResult] = useState<TriggerResult | null>(null);
 
   useEffect(() => {
-    finishSignInRedirect().catch((err) => {
-      console.error('[generator] Redirect sign-in failed:', err);
-      setError('Google sign-in did not finish cleanly.');
+    // Initial session check
+    getSession().then(({ data }) => {
+      setUser(data.session?.user ?? null);
+      setIsAuthLoading(false);
     });
 
-    const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
+    const subscription = onAuthStateChange((nextUser) => {
       setUser(nextUser);
       setIsAuthLoading(false);
     });
 
-    return unsubscribe;
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleTrigger = async () => {
@@ -60,11 +63,13 @@ export function GeneratorApp() {
     setResult(null);
 
     try {
-      const idToken = await user.getIdToken();
+      const { data: { session } } = await getSession();
+      if (!session) throw new Error('No active session.');
+
       const response = await fetch('/api/maintenance/top-up', {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${idToken}`,
+          Authorization: `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
       });
@@ -100,7 +105,7 @@ export function GeneratorApp() {
                 One button. Full database top-up.
               </h1>
               <p className="mt-4 max-w-xl text-sm leading-6 text-slate-200 sm:text-base">
-                This app does one job: trigger the existing server-side question pipeline and write approved questions into Firestore.
+                This app does one job: trigger the existing server-side question pipeline and write approved questions into Supabase.
               </p>
             </div>
 
@@ -120,7 +125,7 @@ export function GeneratorApp() {
               <h2 className="text-lg font-black tracking-wide">Trigger Controls</h2>
             </div>
             <p className="mt-3 text-sm leading-6 text-slate-300">
-              The button calls `/api/maintenance/top-up`. The API checks your Firebase ID token against `MAINTENANCE_ALLOWED_EMAILS`.
+              The button calls `/api/maintenance/top-up`. The API checks your Supabase access token against authorized emails.
             </p>
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
