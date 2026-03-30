@@ -1,5 +1,17 @@
 const DEFAULT_ADMIN_EMAIL = 'dustin.broussard@gmail.com';
 
+function readEnvValue(name: string): string | undefined {
+  if (typeof import.meta !== 'undefined' && import.meta.env && typeof import.meta.env[name] === 'string') {
+    return import.meta.env[name];
+  }
+
+  if (typeof process !== 'undefined' && process.env && typeof process.env[name] === 'string') {
+    return process.env[name];
+  }
+
+  return undefined;
+}
+
 function parseList(value: string | undefined): string[] {
   return (value ?? '')
     .split(',')
@@ -8,10 +20,10 @@ function parseList(value: string | undefined): string[] {
 }
 
 export const adminConfig = {
-  emails: parseList(import.meta.env.VITE_ADMIN_EMAIL).length
-    ? parseList(import.meta.env.VITE_ADMIN_EMAIL)
+  emails: parseList(readEnvValue('VITE_ADMIN_EMAIL')).length
+    ? parseList(readEnvValue('VITE_ADMIN_EMAIL'))
     : [DEFAULT_ADMIN_EMAIL],
-  uids: parseList(import.meta.env.VITE_ADMIN_UID),
+  uids: parseList(readEnvValue('VITE_ADMIN_UID')),
 };
 
 type AdminCandidate = {
@@ -44,3 +56,5 @@ export function getAdminIdentitySummary() {
   const uidSummary = adminConfig.uids.join(', ') || 'none';
   return `email: ${emailSummary} | uid: ${uidSummary}`;
 }
+
+export type { AdminCandidate };

@@ -21,6 +21,27 @@
       ]
     },
     "allowImportingTsExtensions": true,
-    "noEmit": true
-  }
+    "noEmit": true,
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "api/**/*.ts",
+    "services/**/*.ts",
+    "types.ts",
+    "vite.config.ts",
+    "tests/**/*.ts"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "services/invites.ts",
+    "services/playerProfiles.ts",
+    "services/questionFlags.ts",
+    "services/questionRepository.ts",
+    "services/userSettings.ts"
+  ]
 }

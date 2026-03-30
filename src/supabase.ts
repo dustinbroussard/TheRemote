@@ -1,4 +1,11 @@
-import { createClient } from '@supabase/supabase-js';
+import {
+  AuthChangeEvent,
+  RealtimeChannel,
+  Session,
+  SupabaseClient,
+  User,
+  createClient,
+} from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -22,7 +29,31 @@ function throwMissingSupabaseConfig(): never {
   throw new Error(SUPABASE_MISSING_ENV_MESSAGE);
 }
 
-function createMissingSupabaseClient() {
+type SessionResponse = {
+  data: { session: Session | null };
+  error: Error | null;
+};
+
+type MissingSupabaseClient = Pick<SupabaseClient<Database>, 'removeChannel'> & {
+  auth: {
+    signInWithOAuth: () => Promise<never>;
+    signOut: () => Promise<never>;
+    getSession: () => Promise<SessionResponse>;
+    onAuthStateChange: (
+      callback: (event: AuthChangeEvent, session: Session | null) => void
+    ) => {
+      data: {
+        subscription: {
+          unsubscribe: () => void;
+        };
+      };
+    };
+  };
+  from: () => never;
+  channel: () => never;
+};
+
+function createMissingSupabaseClient(): MissingSupabaseClient {
   return new Proxy(
     {},
     {
@@ -35,8 +66,8 @@ function createMissingSupabaseClient() {
               data: { session: null },
               error: new Error(SUPABASE_MISSING_ENV_MESSAGE),
             }),
-            onAuthStateChange: (callback: (_user: any) => void) => {
-              callback(null);
+            onAuthStateChange: (callback: (event: AuthChangeEvent, session: Session | null) => void) => {
+              callback('INITIAL_SESSION', null);
               return {
                 data: {
                   subscription: {
@@ -55,7 +86,7 @@ function createMissingSupabaseClient() {
         return () => throwMissingSupabaseConfig();
       },
     }
-  );
+  ) as MissingSupabaseClient;
 }
 
 // Add the database types as needed.
@@ -65,22 +96,26 @@ export interface Database {
       metadata: {
         Row: {
           id: string;
-          data: any;
+          data: Record<string, unknown>;
           updated_at: string;
         };
         Insert: Partial<Database['public']['Tables']['metadata']['Row']>;
         Update: Partial<Database['public']['Tables']['metadata']['Row']>;
+        Relationships: [];
       };
       inventory: {
         Row: {
           id: string;
+          bucketId?: string;
           category: string;
           difficulty: string;
           count: number;
+          threshold?: number | null;
           last_updated: string;
         };
         Insert: Partial<Database['public']['Tables']['inventory']['Row']>;
         Update: Partial<Database['public']['Tables']['inventory']['Row']>;
+        Relationships: [];
       };
       error_logs: {
         Row: {
@@ -92,17 +127,19 @@ export interface Database {
         };
         Insert: Partial<Database['public']['Tables']['error_logs']['Row']>;
         Update: Partial<Database['public']['Tables']['error_logs']['Row']>;
+        Relationships: [];
       };
       triggers: {
         Row: {
           id: string;
           action: string;
-          params: any;
+          params: Record<string, unknown>;
           status: string;
           timestamp: string;
         };
         Insert: Partial<Database['public']['Tables']['triggers']['Row']>;
         Update: Partial<Database['public']['Tables']['triggers']['Row']>;
+        Relationships: [];
       }
     };
   };
@@ -112,7 +149,7 @@ export const supabase = (
   isSupabaseConfigured
     ? createClient<Database>(supabaseUrl, supabaseAnonKey)
     : createMissingSupabaseClient()
-) as any;
+) as SupabaseClient<Database> | MissingSupabaseClient;
 
 export const signIn = async () => {
   if (!isSupabaseConfigured) throwMissingSupabaseConfig();
@@ -144,7 +181,7 @@ export const getSession = () => {
   return supabase.auth.getSession();
 };
 
-export const onAuthStateChange = (callback: (user: any) => void) => {
+export const onAuthStateChange = (callback: (user: User | null) => void) => {
   if (!isSupabaseConfigured) {
     callback(null);
     return {

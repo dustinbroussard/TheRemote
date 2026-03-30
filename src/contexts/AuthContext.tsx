@@ -1,7 +1,7 @@
 import { User } from '@supabase/supabase-js';
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
-import { isAdminUser } from '../config/admin';
+import { AdminCandidate, isAdminUser } from '../config/admin';
 import { onAuthStateChange, signIn, signOut, getSession } from '../supabase';
 
 type AuthContextValue = {
@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => ({
       user,
       authReady,
-      isAdmin: isAdminUser(user as any),
+      isAdmin: isAdminUser(user as AdminCandidate),
       signIn: async () => {
         try {
           await signIn();

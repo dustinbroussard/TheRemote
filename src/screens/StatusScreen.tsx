@@ -1,4 +1,5 @@
 import { Activity, AlertTriangle, Database, ShieldAlert } from 'lucide-react';
+import { LucideIcon } from 'lucide-react';
 import { motion } from 'motion/react';
 import { format } from 'date-fns';
 
@@ -13,7 +14,7 @@ function Card({
 }: {
   children: React.ReactNode;
   title?: string;
-  icon?: any;
+  icon?: LucideIcon;
   className?: string;
 }) {
   return (

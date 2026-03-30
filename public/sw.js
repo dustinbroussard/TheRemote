@@ -1,9 +1,11 @@
-const CACHE_NAME = 'rc-admin-cache-v1';
+const CACHE_NAME = 'rc-admin-cache-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
-  '/manifest.webmanifest',
   '/generator.html',
+  '/manifest.webmanifest',
+  '/icon-192.png',
+  '/icon-512.png',
 ];
 
 // Install event: cache initial assets
@@ -44,6 +46,10 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (event.request.url.includes('/api/')) {
+    return;
+  }
+
+  if (event.request.cache === 'only-if-cached' && event.request.mode !== 'same-origin') {
     return;
   }
 

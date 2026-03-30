@@ -10,6 +10,7 @@ import {
   ShieldAlert,
   Zap,
   Database as DatabaseIcon,
+  LucideIcon,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { format } from 'date-fns';
@@ -22,7 +23,13 @@ import { supabase } from './supabase';
 import { useAdminData } from './hooks/useAdminData';
 import { cn } from './lib/utils';
 import { StatusScreen } from './screens/StatusScreen';
-import { ErrorLog, InventoryItem, OperationType, TableStat } from './types';
+import { ErrorLog, InventoryItem, TableStat } from './types';
+import { Database } from './supabase';
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
 
 const tabs = [
   { to: '/status', label: 'Status', icon: Activity },
@@ -37,7 +44,7 @@ function TabButton({
   label,
 }: {
   to: string;
-  icon: any;
+  icon: LucideIcon;
   label: string;
 }) {
   return (
@@ -69,7 +76,7 @@ function Card({
 }: {
   children: React.ReactNode;
   title?: string;
-  icon?: any;
+  icon?: LucideIcon;
   className?: string;
 }) {
   return (
@@ -181,12 +188,14 @@ function ActionsScreen({ inventory }: { inventory: InventoryItem[] }) {
     setIsTriggering(true);
     setLastTriggerStatus(null);
     try {
-      await supabase.from('triggers').insert({
+      const triggerRecord: Database['public']['Tables']['triggers']['Insert'] = {
         action,
         params: params || {},
         status: 'pending',
         timestamp: new Date().toISOString(),
-      });
+      };
+
+      await supabase.from('triggers').insert(triggerRecord as never);
       setLastTriggerStatus('Success');
       window.setTimeout(() => setLastTriggerStatus(null), 3000);
     } catch (error) {
@@ -381,16 +390,12 @@ function DatabaseScreen({ stats }: { stats: TableStat[] }) {
 function AppShell() {
   const { signOutUser, authReady, user, isAdmin } = useAuth();
   const { metadata, inventory, logs, tableStats, loading } = useAdminData(authReady && !!user && isAdmin);
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (event: Event) => {
-      const promptEvent = event as Event & {
-        prompt: () => Promise<void>;
-        userChoice: Promise<{ outcome: string }>;
-      };
-
+      const promptEvent = event as BeforeInstallPromptEvent;
       promptEvent.preventDefault();
       setDeferredPrompt(promptEvent);
 

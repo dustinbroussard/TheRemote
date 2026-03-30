@@ -1,8 +1,9 @@
 export type SystemStatus = 'Idle' | 'Running';
+export type IsoDateString = string;
 
 export interface SystemMetadata {
   status: SystemStatus;
-  lastReplenishRun?: any; // Accepting any and checking with new Date() if needed
+  lastReplenishRun?: IsoDateString | null;
   lastError?: string;
 }
 
@@ -19,15 +20,15 @@ export interface ErrorLog {
   bucketId?: string;
   stage: string;
   message: string;
-  timestamp: any;
+  timestamp: IsoDateString;
 }
 
 export interface Trigger {
   id: string;
   action: string;
-  params?: Record<string, any>;
+  params?: Record<string, unknown>;
   status: 'pending' | 'processing' | 'completed' | 'failed';
-  timestamp: any;
+  timestamp: IsoDateString;
 }
 
 export enum OperationType {
@@ -49,5 +50,5 @@ export interface SupabaseErrorInfo {
   error: string;
   operationType: OperationType;
   path: string | null;
-  authInfo?: any;
+  authInfo?: Record<string, unknown>;
 }

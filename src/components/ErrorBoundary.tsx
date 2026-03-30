@@ -1,4 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { SupabaseErrorInfo } from '../types';
 
 interface Props {
   children: ReactNode;
@@ -30,7 +31,7 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       let errorMessage = 'An unexpected error occurred.';
       try {
-        const parsed = JSON.parse(this.state.error?.message || '');
+        const parsed = JSON.parse(this.state.error?.message || '') as Partial<SupabaseErrorInfo>;
         if (parsed.error) {
           errorMessage = `Firestore Error: ${parsed.error} (${parsed.operationType} on ${parsed.path})`;
         }

@@ -1,6 +1,27 @@
 import { useEffect, useState } from 'react';
+import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+
 import { supabase } from '../supabase';
 import { ErrorLog, InventoryItem, SystemMetadata, TableStat } from '../types';
+
+type MetadataRow = {
+  id: string;
+  data: SystemMetadata;
+};
+
+type InventoryRow = InventoryItem & {
+  id?: string;
+};
+
+function toInventoryItem(row: InventoryRow): InventoryItem {
+  return {
+    bucketId: row.bucketId ?? row.id ?? `${row.category}-${row.difficulty}`,
+    category: row.category,
+    difficulty: row.difficulty,
+    count: row.count,
+    threshold: row.threshold ?? undefined,
+  };
+}
 
 export function useAdminData(enabled: boolean) {
   const [metadata, setMetadata] = useState<SystemMetadata | null>(null);
@@ -24,14 +45,15 @@ export function useAdminData(enabled: boolean) {
     const fetchInitialData = async () => {
       try {
         const [metaRes, invRes, logsRes, triggersCount] = await Promise.all([
-          supabase.from('metadata').select('data').eq('id', 'system').maybeSingle(),
+          supabase.from('metadata').select('id, data').eq('id', 'system').maybeSingle(),
           supabase.from('inventory').select('*', { count: 'exact' }),
           supabase.from('error_logs').select('*', { count: 'exact' }).order('timestamp', { ascending: false }).limit(20),
           supabase.from('triggers').select('*', { count: 'exact', head: true })
         ]);
+        const metadataRow = metaRes as { data: MetadataRow | null };
 
-        if (metaRes.data) setMetadata(metaRes.data.data as SystemMetadata);
-        if (invRes.data) setInventory(invRes.data as InventoryItem[]);
+        if (metadataRow.data) setMetadata(metadataRow.data.data);
+        if (invRes.data) setInventory((invRes.data as InventoryRow[]).map(toInventoryItem));
         if (logsRes.data) setLogs(logsRes.data as ErrorLog[]);
 
         setTableStats([
@@ -55,8 +77,10 @@ export function useAdminData(enabled: boolean) {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'metadata', filter: 'id=eq.system' },
-        (payload) => {
-          if (payload.new) setMetadata((payload.new as any).data as SystemMetadata);
+        (payload: RealtimePostgresChangesPayload<MetadataRow>) => {
+          if ('data' in payload.new) {
+            setMetadata(payload.new.data);
+          }
         }
       )
       .subscribe();
@@ -68,7 +92,7 @@ export function useAdminData(enabled: boolean) {
         { event: '*', schema: 'public', table: 'inventory' },
         () => {
           supabase.from('inventory').select('*', { count: 'exact' }).then(({ data, count }) => {
-            if (data) setInventory(data as InventoryItem[]);
+            if (data) setInventory((data as InventoryRow[]).map(toInventoryItem));
             setTableStats(prev => prev.map(s => s.name === 'Inventory' ? { ...s, count: count || 0 } : s));
           });
         }
