@@ -33,7 +33,7 @@ export class ErrorBoundary extends Component<Props, State> {
       try {
         const parsed = JSON.parse(this.state.error?.message || '') as Partial<SupabaseErrorInfo>;
         if (parsed.error) {
-          errorMessage = `Firestore Error: ${parsed.error} (${parsed.operationType} on ${parsed.path})`;
+          errorMessage = `Supabase Error: ${parsed.error} (${parsed.operationType} on ${parsed.path})`;
         }
       } catch {
         errorMessage = this.state.error?.message || errorMessage;
@@ -44,6 +44,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <h1 className="text-danger text-2xl font-bold mb-4">System Failure</h1>
           <p className="text-secondary-text mb-6">{errorMessage}</p>
           <button
+            type="button"
             onClick={() => window.location.reload()}
             className="px-6 py-2 bg-bg-tertiary border border-primary-accent text-primary-accent rounded-sm hover:bg-bg-secondary transition-colors"
           >

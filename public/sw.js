@@ -64,6 +64,11 @@ self.addEventListener('fetch', (event) => {
           return networkResponse;
         }).catch(() => {
           if (event.request.mode === 'navigate') {
+            const pathname = new URL(event.request.url).pathname;
+            if (pathname === '/generator') {
+              return cache.match('/generator.html');
+            }
+
             return cache.match('/index.html');
           }
 

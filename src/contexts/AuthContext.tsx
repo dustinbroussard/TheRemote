@@ -20,10 +20,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Initial session check
-    getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null);
-      setAuthReady(true);
-    });
+    getSession()
+      .then(({ data }) => {
+        setUser(data.session?.user ?? null);
+        setAuthReady(true);
+      })
+      .catch((error) => {
+        console.error('Initial auth session check failed:', error);
+        setUser(null);
+        setAuthReady(true);
+      });
 
     const subscription = onAuthStateChange((nextUser) => {
       setUser(nextUser);

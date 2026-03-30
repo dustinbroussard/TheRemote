@@ -1,7 +1,7 @@
 {
   "name": "Remote Control: Question Bank Admin",
   "short_name": "RC Admin",
-  "description": "High-performance administrative console for managing a Firestore-backed question bank.",
+  "description": "High-performance administrative console for managing a Supabase-backed question bank.",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",

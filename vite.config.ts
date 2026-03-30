@@ -47,7 +47,9 @@ export default defineConfig(({mode}) => {
   const securityHeaders = {
     'Content-Security-Policy': createContentSecurityPolicy(isDev),
     'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+    'Cross-Origin-Resource-Policy': 'same-origin',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'X-Frame-Options': 'SAMEORIGIN',
     'X-Content-Type-Options': 'nosniff',
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
   };

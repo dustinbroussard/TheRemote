@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import { Loader2, LogIn, ShieldCheck, Sparkles } from 'lucide-react';
-import { getSession, onAuthStateChange, signIn, signOut } from './supabase';
+import { getSession, isSupabaseConfigured, onAuthStateChange, signIn, signOut, SUPABASE_MISSING_ENV_MESSAGE } from './supabase';
 
 interface TriggerResult {
   message?: string;
@@ -37,10 +37,16 @@ export function GeneratorApp() {
 
   useEffect(() => {
     // Initial session check
-    getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null);
-      setIsAuthLoading(false);
-    });
+    getSession()
+      .then(({ data }) => {
+        setUser(data.session?.user ?? null);
+        setIsAuthLoading(false);
+      })
+      .catch((err) => {
+        console.error('[generator] Session bootstrap failed:', err);
+        setUser(null);
+        setIsAuthLoading(false);
+      });
 
     const subscription = onAuthStateChange((nextUser) => {
       setUser(nextUser);
@@ -128,6 +134,12 @@ export function GeneratorApp() {
               The button calls `/api/maintenance/top-up`. The API checks your Supabase access token against authorized emails.
             </p>
 
+            {!isSupabaseConfigured ? (
+              <div className="mt-5 rounded-2xl border border-rose-300/25 bg-rose-400/10 px-4 py-3 text-sm text-rose-100" role="alert">
+                {SUPABASE_MISSING_ENV_MESSAGE}
+              </div>
+            ) : null}
+
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               {!user ? (
                 <button
@@ -136,7 +148,7 @@ export function GeneratorApp() {
                     console.error('[generator] Sign-in failed:', err);
                     setError(err instanceof Error ? err.message : 'Google sign-in failed.');
                   })}
-                  disabled={isAuthLoading}
+                  disabled={isAuthLoading || !isSupabaseConfigured}
                   className="inline-flex items-center justify-center gap-2 rounded-2xl bg-cyan-400 px-5 py-4 font-black text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isAuthLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <LogIn className="h-5 w-5" />}
@@ -147,7 +159,7 @@ export function GeneratorApp() {
                   <button
                     type="button"
                     onClick={handleTrigger}
-                    disabled={isRunning}
+                    disabled={isRunning || !isSupabaseConfigured}
                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-400 px-5 py-4 font-black text-slate-950 transition hover:bg-orange-300 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isRunning ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}

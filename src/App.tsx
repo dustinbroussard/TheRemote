@@ -19,7 +19,7 @@ import { HashRouter, NavLink, Navigate, Outlet, Route, Routes } from 'react-rout
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { getAdminIdentitySummary } from './config/admin';
 import { useAuth, AuthProvider } from './contexts/AuthContext';
-import { supabase } from './supabase';
+import { isSupabaseConfigured, SUPABASE_MISSING_ENV_MESSAGE, supabase } from './supabase';
 import { useAdminData } from './hooks/useAdminData';
 import { cn } from './lib/utils';
 import { StatusScreen } from './screens/StatusScreen';
@@ -94,7 +94,7 @@ function Card({
 
 function LoadingScreen() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-bg-primary">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-bg-primary" role="status" aria-live="polite">
       <motion.div
         animate={{ rotate: 360 }}
         transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
@@ -105,6 +105,15 @@ function LoadingScreen() {
       <div className="text-[10px] text-gray-500 uppercase tracking-widest font-bold animate-pulse">
         Initializing System...
       </div>
+    </div>
+  );
+}
+
+function ConfigNotice({ className }: { className?: string }) {
+  return (
+    <div className={cn('rounded-sm border border-danger/30 bg-danger/10 p-3 text-left', className)} role="alert">
+      <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-danger">Configuration Required</div>
+      <p className="mt-2 text-xs leading-relaxed text-gray-300">{SUPABASE_MISSING_ENV_MESSAGE}</p>
     </div>
   );
 }
@@ -124,9 +133,12 @@ function LoginScreen() {
       <p className="text-gray-600 text-[10px] text-center mb-10 max-w-[280px] font-mono">
         Allowed identity: {getAdminIdentitySummary()}
       </p>
+      {!isSupabaseConfigured && <ConfigNotice className="w-full max-w-[280px] mb-6" />}
       <button
+        type="button"
+        disabled={!isSupabaseConfigured}
         onClick={() => void signIn()}
-        className="w-full max-w-[280px] py-4 bg-bg-tertiary border border-primary-accent text-primary-accent text-xs font-bold uppercase tracking-widest rounded-sm hover:bg-primary-accent hover:text-bg-primary transition-all duration-300 flex items-center justify-center gap-3"
+        className="w-full max-w-[280px] py-4 bg-bg-tertiary border border-primary-accent text-primary-accent text-xs font-bold uppercase tracking-widest rounded-sm hover:bg-primary-accent hover:text-bg-primary transition-all duration-300 flex items-center justify-center gap-3 disabled:cursor-not-allowed disabled:opacity-40"
       >
         <Zap size={16} />
         Sign In With Google
@@ -147,6 +159,7 @@ function UnauthorizedScreen() {
       </p>
       <p className="text-gray-600 text-[10px] mb-8 font-mono">{getAdminIdentitySummary()}</p>
       <button
+        type="button"
         onClick={() => void signOutUser()}
         className="text-tertiary-accent text-[10px] uppercase font-bold tracking-widest border-b border-tertiary-accent pb-1"
       >
@@ -210,6 +223,7 @@ function ActionsScreen({ inventory }: { inventory: InventoryItem[] }) {
       <Card title="Global Triggers" icon={Zap}>
         <div className="grid grid-cols-1 gap-3">
           <button
+            type="button"
             disabled={isTriggering}
             onClick={() => void triggerAction('replenishAllBuckets')}
             className="flex items-center justify-between w-full p-4 bg-bg-tertiary border border-primary-accent/30 text-primary-accent rounded-sm hover:bg-primary-accent/10 transition-colors disabled:opacity-50"
@@ -225,6 +239,7 @@ function ActionsScreen({ inventory }: { inventory: InventoryItem[] }) {
           </button>
 
           <button
+            type="button"
             disabled={isTriggering}
             onClick={() => void triggerAction('runValidationSuite')}
             className="flex items-center justify-between w-full p-4 bg-bg-tertiary border border-tertiary-accent/30 text-tertiary-accent rounded-sm hover:bg-tertiary-accent/10 transition-colors disabled:opacity-50"
@@ -288,6 +303,7 @@ function ActionsScreen({ inventory }: { inventory: InventoryItem[] }) {
           </div>
 
           <button
+            type="button"
             disabled={isTriggering || !selectedCategory || !selectedDifficulty}
             onClick={() =>
               void triggerAction('replenishSelectedBucket', {
@@ -302,7 +318,7 @@ function ActionsScreen({ inventory }: { inventory: InventoryItem[] }) {
           </button>
 
           {lastTriggerStatus && (
-            <div className="text-center text-[10px] text-secondary-text font-bold uppercase animate-pulse">
+            <div className="text-center text-[10px] text-secondary-text font-bold uppercase animate-pulse" aria-live="polite">
               Trigger Sent Successfully
             </div>
           )}
@@ -442,6 +458,7 @@ function AppShell() {
           <h1 className="text-[11px] uppercase tracking-[0.2em] font-black">Supabase Monitor</h1>
         </div>
         <button
+          type="button"
           aria-label="Sign out"
           onClick={() => void signOutUser()}
           className="text-gray-500 hover:text-danger transition-colors"
@@ -451,6 +468,9 @@ function AppShell() {
       </header>
 
       <main className="flex-1 p-6 pb-24 overflow-y-auto">
+        {!isSupabaseConfigured && (
+          <ConfigNotice className="mb-4" />
+        )}
         <Routes>
           <Route index element={<Navigate to="/status" replace />} />
           <Route path="/status" element={<StatusScreen metadata={metadata} inventory={inventory} />} />
@@ -487,7 +507,7 @@ function AppShell() {
               <button onClick={handleDismissInstall} className="px-3 py-1.5 text-[10px] font-bold uppercase text-gray-500 hover:text-white transition-colors">
                 Later
               </button>
-              <button onClick={() => void handleInstallClick()} className="px-4 py-1.5 bg-primary-accent text-bg-primary text-[10px] font-bold uppercase tracking-widest rounded-sm hover:opacity-90 transition-opacity">
+              <button type="button" onClick={() => void handleInstallClick()} className="px-4 py-1.5 bg-primary-accent text-bg-primary text-[10px] font-bold uppercase tracking-widest rounded-sm hover:opacity-90 transition-opacity">
                 Install
               </button>
             </div>
