@@ -1,4 +1,4 @@
-const DEFAULT_ADMIN_EMAIL = 'dustinbroussard@gmail.com';
+const DEFAULT_ADMIN_EMAIL = 'dustin.broussard@gmail.com';
 
 function readEnvValue(name: string): string | undefined {
   if (typeof import.meta !== 'undefined' && import.meta.env && typeof import.meta.env[name] === 'string') {
