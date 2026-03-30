@@ -79,7 +79,7 @@ function createMissingSupabaseClient(): MissingSupabaseClient {
               return {
                 data: {
                   subscription: {
-                    unsubscribe() {},
+                    unsubscribe() { },
                   },
                 },
               };
@@ -193,7 +193,7 @@ export const onAuthStateChange = (callback: (user: User | null) => void) => {
   if (!isSupabaseConfigured) {
     callback(null);
     return {
-      unsubscribe() {},
+      unsubscribe() { },
     };
   }
   const {

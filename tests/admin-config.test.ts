@@ -8,7 +8,7 @@ import type { TriviaQuestion } from '../types';
 test('isAdminUser requires a verified allowed email', () => {
   assert.equal(
     isAdminUser({
-      email: 'dustin.broussard@gmail.com',
+      email: 'dustinbroussard@gmail.com',
       email_confirmed_at: '2026-03-26T00:00:00.000Z',
     }),
     true,
@@ -16,7 +16,7 @@ test('isAdminUser requires a verified allowed email', () => {
 
   assert.equal(
     isAdminUser({
-      email: 'dustin.broussard@gmail.com',
+      email: 'dustinbroussard@gmail.com',
       email_confirmed_at: null,
     }),
     false,
