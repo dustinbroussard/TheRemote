@@ -32,7 +32,9 @@ export function GeneratorApp() {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [isRunning, setIsRunning] = useState(false);
+  const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [result, setResult] = useState<TriggerResult | null>(null);
 
   useEffect(() => {
@@ -94,6 +96,26 @@ export function GeneratorApp() {
     }
   };
 
+  const handleSignIn = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail) {
+      setError('Enter an email address first.');
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+
+    try {
+      await signIn(normalizedEmail);
+      setNotice(`Magic link sent to ${normalizedEmail}. Open that email on this device to continue.`);
+    } catch (err) {
+      console.error('[generator] Sign-in failed:', err);
+      setError(err instanceof Error ? err.message : 'Magic-link sign-in failed.');
+    }
+  };
+
   const summary = summarizeResults(result);
 
   return (
@@ -142,18 +164,27 @@ export function GeneratorApp() {
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               {!user ? (
-                <button
-                  type="button"
-                  onClick={() => signIn().catch((err) => {
-                    console.error('[generator] Sign-in failed:', err);
-                    setError(err instanceof Error ? err.message : 'Google sign-in failed.');
-                  })}
-                  disabled={isAuthLoading || !isSupabaseConfigured}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-cyan-400 px-5 py-4 font-black text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isAuthLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <LogIn className="h-5 w-5" />}
-                  Sign In With Google
-                </button>
+                <>
+                  <input
+                    type="email"
+                    autoComplete="email"
+                    inputMode="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    disabled={isAuthLoading || !isSupabaseConfigured}
+                    className="min-w-0 flex-1 rounded-2xl border border-white/14 bg-white/6 px-5 py-4 text-white outline-none transition placeholder:text-slate-400 focus:border-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+                    placeholder="you@example.com"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void handleSignIn()}
+                    disabled={isAuthLoading || !isSupabaseConfigured}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-cyan-400 px-5 py-4 font-black text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isAuthLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <LogIn className="h-5 w-5" />}
+                    {isAuthLoading ? 'Checking...' : 'Email Magic Link'}
+                  </button>
+                </>
               ) : (
                 <>
                   <button
@@ -182,6 +213,12 @@ export function GeneratorApp() {
             {error ? (
               <div className="mt-5 rounded-2xl border border-rose-300/25 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
                 {error}
+              </div>
+            ) : null}
+
+            {notice ? (
+              <div className="mt-5 rounded-2xl border border-cyan-300/25 bg-cyan-400/10 px-4 py-3 text-sm text-cyan-100">
+                {notice}
               </div>
             ) : null}
 

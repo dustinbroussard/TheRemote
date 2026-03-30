@@ -34,9 +34,17 @@ type SessionResponse = {
   error: Error | null;
 };
 
+type SignInWithOtpResponse = {
+  data: {
+    session: Session | null;
+    user: User | null;
+  };
+  error: Error | null;
+};
+
 type MissingSupabaseClient = Pick<SupabaseClient<Database>, 'removeChannel'> & {
   auth: {
-    signInWithOAuth: () => Promise<never>;
+    signInWithOtp: () => Promise<SignInWithOtpResponse>;
     signOut: () => Promise<never>;
     getSession: () => Promise<SessionResponse>;
     onAuthStateChange: (
@@ -60,7 +68,7 @@ function createMissingSupabaseClient(): MissingSupabaseClient {
       get(_target, prop) {
         if (prop === 'auth') {
           return {
-            signInWithOAuth: async () => throwMissingSupabaseConfig(),
+            signInWithOtp: async () => throwMissingSupabaseConfig(),
             signOut: async () => throwMissingSupabaseConfig(),
             getSession: async () => ({
               data: { session: null },
@@ -151,12 +159,12 @@ export const supabase = (
     : createMissingSupabaseClient()
 ) as SupabaseClient<Database> | MissingSupabaseClient;
 
-export const signIn = async () => {
+export const signIn = async (email: string) => {
   if (!isSupabaseConfigured) throwMissingSupabaseConfig();
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
+  const { data, error } = await supabase.auth.signInWithOtp({
+    email,
     options: {
-      redirectTo: `${window.location.origin}${window.location.pathname}`,
+      emailRedirectTo: `${window.location.origin}${window.location.pathname}`,
     },
   });
 

@@ -120,6 +120,33 @@ function ConfigNotice({ className }: { className?: string }) {
 
 function LoginScreen() {
   const { signIn } = useAuth();
+  const [email, setEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail) {
+      setError('Enter an email address.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setNotice(null);
+    setError(null);
+
+    try {
+      await signIn(normalizedEmail);
+      setNotice(`Magic link sent to ${normalizedEmail}. Open that email on this device to finish signing in.`);
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Failed to send magic link.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-bg-primary p-6">
@@ -128,21 +155,46 @@ function LoginScreen() {
       </div>
       <h1 className="text-xl font-bold mb-2 tracking-tight">Admin Terminal</h1>
       <p className="text-gray-500 text-xs text-center mb-3 max-w-[280px] leading-relaxed">
-        Sign in with Google to access the trivia generation admin app.
+        Sign in with your approved email address. We will send a magic link to finish access.
       </p>
       <p className="text-gray-600 text-[10px] text-center mb-10 max-w-[280px] font-mono">
         Allowed identity: {getAdminIdentitySummary()}
       </p>
       {!isSupabaseConfigured && <ConfigNotice className="w-full max-w-[280px] mb-6" />}
-      <button
-        type="button"
-        disabled={!isSupabaseConfigured}
-        onClick={() => void signIn()}
-        className="w-full max-w-[280px] py-4 bg-bg-tertiary border border-primary-accent text-primary-accent text-xs font-bold uppercase tracking-widest rounded-sm hover:bg-primary-accent hover:text-bg-primary transition-all duration-300 flex items-center justify-center gap-3 disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        <Zap size={16} />
-        Sign In With Google
-      </button>
+      <form className="w-full max-w-[280px]" onSubmit={(event) => void handleSubmit(event)}>
+        <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.18em] text-gray-500" htmlFor="email">
+          Email
+        </label>
+        <input
+          id="email"
+          type="email"
+          autoComplete="email"
+          inputMode="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          disabled={isSubmitting || !isSupabaseConfigured}
+          className="mb-4 w-full rounded-sm border border-bg-tertiary bg-bg-tertiary px-4 py-4 text-sm text-white outline-none transition focus:border-primary-accent disabled:cursor-not-allowed disabled:opacity-40"
+          placeholder="you@example.com"
+        />
+        <button
+          type="submit"
+          disabled={isSubmitting || !isSupabaseConfigured}
+          className="w-full py-4 bg-bg-tertiary border border-primary-accent text-primary-accent text-xs font-bold uppercase tracking-widest rounded-sm hover:bg-primary-accent hover:text-bg-primary transition-all duration-300 flex items-center justify-center gap-3 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <Zap size={16} />
+          {isSubmitting ? 'Sending Link...' : 'Email Magic Link'}
+        </button>
+        {notice ? (
+          <p className="mt-4 text-xs leading-relaxed text-tertiary-accent" role="status">
+            {notice}
+          </p>
+        ) : null}
+        {error ? (
+          <p className="mt-4 text-xs leading-relaxed text-danger" role="alert">
+            {error}
+          </p>
+        ) : null}
+      </form>
     </div>
   );
 }

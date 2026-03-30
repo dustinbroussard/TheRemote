@@ -8,7 +8,7 @@ type AuthContextValue = {
   user: User | null;
   authReady: boolean;
   isAdmin: boolean;
-  signIn: () => Promise<void>;
+  signIn: (email: string) => Promise<void>;
   signOutUser: () => Promise<void>;
 };
 
@@ -46,9 +46,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       authReady,
       isAdmin: isAdminUser(user as AdminCandidate),
-      signIn: async () => {
+      signIn: async (email: string) => {
         try {
-          await signIn();
+          await signIn(email);
         } catch (error) {
           console.error('Sign in error:', error);
           throw error;
